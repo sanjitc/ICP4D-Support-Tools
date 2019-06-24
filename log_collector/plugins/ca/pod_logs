@@ -1,0 +1,20 @@
+#!/bin/bash
+
+## Setup ##
+setup(){
+  export HOME_DIR=`pwd`
+  export UTIL_DIR=`pwd`"/util"
+  export LOG_COLLECT_DIR=`pwd`"/log_collector"
+
+  . $UTIL_DIR/util.sh
+  . $LOG_COLLECT_DIR/icpd-logcollector-master-nodes.sh
+}
+
+setup $@
+
+# component_log_collector <Component> <Temp directory> <Number of lined collect from each pod>
+# For example:  component_log_collector dsx /tmp 50
+component_log_collector $1 $2 $3
+
+
+

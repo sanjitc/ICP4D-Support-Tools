@@ -1,0 +1,17 @@
+#!/bin/bash
+
+## Setup ##
+setup(){
+  export HOME_DIR=`pwd`
+  export UTIL_DIR=`pwd`"/util"
+  export LOG_COLLECT_DIR=`pwd`"/log_collector"
+
+  . $UTIL_DIR/util.sh
+  . $LOG_COLLECT_DIR/icpd-logcollector-master-nodes.sh
+}
+
+setup $@
+
+local tempdir=$logs_dir
+cmd="sysctl -a 2>/dev/null"
+get_log_by_cmd $tempdir sysctl "$cmd"

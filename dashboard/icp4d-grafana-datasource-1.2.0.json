@@ -1,0 +1,7 @@
+{
+  "name":"ICP4D-DS",
+  "type":"prometheus",
+  "url":"https://mycluster.icp:8443/prometheus",
+  "access":"Browser",
+  "basicAuth":false
+}

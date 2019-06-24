@@ -23,9 +23,49 @@ setup() {
     echo =============================================================
 }
 
+# exec_ssh() - Run command remotely using SSH. It takes two arguments. #
+# Argument 1 = remote host name                                        #    
+# Argument 2 = command needs to run                                    #
+exec_ssh() {
+    eval ssh_host="$1"
+    eval ssh_cmd="$2"
+
+    # Do not use SSH on local node #
+    if [ ${ssh_host} == ${current_node} ]; then
+       eval ${ssh_cmd}
+    else   
+        ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o PasswordAuthentication=no \
+            -o ConnectTimeout=10 -Tn ${ssh_host} ${ssh_cmd}
+    fi
+}
+
 health_check() {
     local temp_dir=$1
+    current_node=`hostname -i|awk '{print $1}'`
+    master_nodes=`get_master_nodes $CONFIG_DIR|awk '{print $1}'`
     all_nodes=`get_master_nodes $CONFIG_DIR|awk '{print $1}'; get_worker_nodes $CONFIG_DIR|awk '{print $1}'`
+
+        echo
+        echo Checking node accessible with ssh...
+        echo ------------------------
+        for i in `echo $all_nodes`
+        do
+            ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o PasswordAuthentication=no \
+                -o ConnectTimeout=10 -Tn $i exit > /dev/null 2>&1
+            if [ $? -eq 0 ]; then
+               echo -e SSH to node $i ${COLOR_GREEN}\[OK\]${COLOR_NC}
+               ssh_status=0
+            else 
+               echo -e SSH to node $i ${COLOR_RED}\[FAILED\]${COLOR_NC}
+               ssh_status=-1
+               if [ $i == ${current_node} ]; then
+                  echo -e ${COLOR_RED}SSH is not working. Run health check loclly on other nodes. ${COLOR_NC}
+               else
+                  echo -e ${COLOR_RED}SSH is not working. Run health check loclly on $i. ${COLOR_NC}
+               fi
+            fi
+        done
+
 
         echo
         echo Checking node availability...
@@ -55,28 +95,12 @@ health_check() {
             fi
         done
 
-
-        echo
-        echo Checking node accessible with ssh...
-        echo ------------------------
-        for i in `echo $all_nodes`
-        do
-            ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o PasswordAuthentication=no \
-                -o ConnectTimeout=10 -Tn $i exit > /dev/null 2>&1
-            if [ $? -eq 0 ]; then
-               echo -e SSH to node $i ${COLOR_GREEN}\[OK\]${COLOR_NC}
-            else 
-               echo -e SSH to node $i ${COLOR_RED}\[FAILED\]${COLOR_NC}
-            fi
-        done
-
         echo
         echo Checking Docker status...
         echo ------------------------
         for i in `echo $all_nodes`
         do
-            ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o PasswordAuthentication=no \
-                -o ConnectTimeout=10 -Tn $i "systemctl status docker|egrep 'Active:'|egrep 'running'" > /dev/null 2>&1
+            exec_ssh "$i" "\"systemctl status docker|egrep 'Active:'|egrep 'running'\"" > /dev/null 2>&1
             if [ $? -eq 0 ]; then
                echo -e Docker status on node $i ${COLOR_GREEN}\[OK\]${COLOR_NC}
             else 
@@ -89,12 +113,50 @@ health_check() {
         echo ------------------------
         for i in `echo $all_nodes`
         do
-            ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o PasswordAuthentication=no \
-                -o ConnectTimeout=10 -Tn $i "systemctl status kubelet|egrep 'Active:'|egrep 'running'" > /dev/null 2>&1
+            exec_ssh "$i" "\"systemctl status kubelet|egrep 'Active:'|egrep 'running'\"" > /dev/null 2>&1
             if [ $? -eq 0 ]; then
                echo -e Kubelet status on node $i ${COLOR_GREEN}\[OK\]${COLOR_NC}
             else 
                echo -e Kubelet status on node $i ${COLOR_RED}\[FAILED\]${COLOR_NC}
+            fi
+        done
+
+        echo
+        echo Checking Glusterd status...
+        echo ------------------------
+        for i in `echo $all_nodes`
+        do
+            exec_ssh "$i" "\"systemctl status glusterd|egrep 'Active:'|egrep 'running'\"" > /dev/null 2>&1
+            if [ $? -eq 0 ]; then
+               echo -e Glusterd status on node $i ${COLOR_GREEN}\[OK\]${COLOR_NC}
+            else 
+               echo -e Glusterd status on node $i ${COLOR_RED}\[FAILED\]${COLOR_NC}
+            fi
+        done
+
+        echo
+        echo Checking Docker availability...
+        echo ------------------------
+        for i in `echo $all_nodes`
+        do
+            exec_ssh "$i" "\"docker ps --format '{{.Image}}'\"" > /dev/null 2>&1
+            if [ $? -eq 0 ]; then
+               echo -e Docker running on node $i ${COLOR_GREEN}\[OK\]${COLOR_NC}
+            else 
+               echo -e Docker running on node $i ${COLOR_RED}\[FAILED\]${COLOR_NC}
+            fi
+        done
+
+        echo
+        echo Checking Docker registry...
+        echo ------------------------
+        for i in `echo $master_nodes`
+        do
+            exec_ssh "$i" "\"ls /var/lib/registry\"" > /dev/null 2>&1
+            if [ $? -eq 0 ]; then
+               echo -e Docker registry mounted on node $i ${COLOR_GREEN}\[OK\]${COLOR_NC}
+            else 
+               echo -e Docker registry mounted on node $i ${COLOR_RED}\[FAILED\]${COLOR_NC}
             fi
         done
 
@@ -137,15 +199,27 @@ health_check() {
         echo
         echo Checking pod status...
         echo ------------------------
-        down_pod_count=$(kubectl get pods --all-namespaces --no-headers|egrep -vw 'Running|Completed'|wc -l)
+        down_pod_count=$(kubectl get pods --all-namespaces --no-headers| grep -Ev '1/1 .* R|2/2 .* R|3/3 .* R|4/4 .* R|5/5 .* R|6/6 .* R' | grep -v 'Completed' |wc -l)
         if [ $down_pod_count -gt 0 ]; then
             echo -e Not all pods are ready ${COLOR_RED}\[FAILED\]${COLOR_NC}
-            kubectl get pods --all-namespaces | egrep -v 'Running|Complete'
-            #exit 1
+            kubectl get pods --all-namespaces | grep -Ev '1/1 .* R|2/2 .* R|3/3 .* R|4/4 .* R|5/5 .* R|6/6 .* R' | grep -v 'Completed'  
         else
             echo -e All pods are ready ${COLOR_GREEN}\[OK\]${COLOR_NC}
         fi
 		
+        echo
+        echo Checking end-user deployments status...
+        echo ------------------------
+        user_deployments="spss-modeler-server|zeppelin-server|dods-processor-server|wex-server|shaper-server|rstudio-server|jupyter-server|jupyter-py36-server|jupyter-py35-server"
+        older_pod_count=$(kubectl get pods --all-namespaces -o go-template --template '{{range .items}}{{.metadata.namespace}}|{{.metadata.name}}|{{.metadata.creationTimestamp}}{{"\n"}}{{end}}'|\
+        awk '$3 <= "'$(date -d 'yesterday' -Ins --utc | sed 's/+0000/Z/')'" { print $1 }'|egrep "$user_deployments"|wc -l)
+        if [ $older_pod_count -gt 0 ]; then
+            echo -e Some end-user deployment pods running longer than 24 hrs ${COLOR_RED}\[WARNING\]${COLOR_NC}
+            kubectl get pods --all-namespaces -o go-template --template '{{range .items}}{{.metadata.namespace}}|{{.metadata.name}}|{{.metadata.creationTimestamp}}{{"\n"}}{{end}}'|\
+            awk '$3 <= "'$(date -d 'yesterday' -Ins --utc | sed 's/+0000/Z/')'" { print $1 }'|egrep "$user_deployments"
+        else
+            echo -e No end-user deployment pods running longer than 24 hrs ${COLOR_GREEN}\[OK\]${COLOR_NC}
+        fi
 		 
 		echo
 		echo Checking Disk Status for Nodes ...
@@ -202,7 +276,18 @@ health_check() {
 			
 		done	
 
-
+                echo
+                echo Checking CPU usage for Nodes ...
+                echo ------------------------
+                for node in $nodes; do
+                    cpu=$(kubectl top node $node|grep $node|awk '{print $3}'|awk -F "%" '{print $1}')
+                    if [ $cpu -gt 80 ]; then
+                        echo -e Node $node has CPU pressure ${COLOR_RED}\[WARNING\]${COLOR_NC}
+                        kubectl top  node $node
+                    else
+                        echo -e Node $node has sufficient CPU available ${COLOR_GREEN}\[OK\]${COLOR_NC}
+                    fi
+                done
 }
 
 

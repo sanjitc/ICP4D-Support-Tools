@@ -45,7 +45,6 @@ log_collector(){
     #select relevant pods first
     # Swicth between all pods and non healthy pods
     all_pods=`kubectl get pods -n $ns --no-headers | awk '{print $1}'`
-    #all_pods=`kubectl get pods -n $ns --no-headers|egrep -v 'Running|Completed'|awk '{print $1}'`
 
 
     if [ !  -z "$PERSONA"  ]; then
@@ -56,7 +55,7 @@ log_collector(){
       ## Logs are hardcoded here. Needs a batter way to handel it later.
       if [ $element == "O" ]; then
          get_pod_log_by_name $tempdir zen-iis-xmetarepo-db2diag.log $ns \
-            $(kubectl get pods -n zen|grep zen-ibm-iisee-zen-iis-xmetarepo|awk '{print $1}') \
+            $(kubectl get pods -n zen|grep ibm-iisee-zen-iis-xmetarepo|awk '{print $1}') \
             "/home/db2inst1/sqllib/db2dump/db2diag.log"
 
          get_pod_log_by_name $tempdir is-en-conductor-cognition-engine-server.log $ns \
@@ -97,7 +96,7 @@ log_collector(){
        if [ "$selected" = true ] ; then
  
        #check if this pod is down.
-       kubectl get pods -n $ns $dp --no-headers|egrep -v 'Running|Complete' > /dev/null
+       kubectl get pods -n $ns $dp --no-headers|grep -Ev '1/1 .* R|2/2 .* R|3/3 .* R|4/4 .* R|5/5 .* R|6/6 .* R' | grep -v 'Completed'  > /dev/null
        
        if [ $? -eq 0 ] ; then 
            #Pod is down
@@ -107,7 +106,7 @@ log_collector(){
                echo "echo '### '" >> $tmpFileForDownPods
                echo "echo '### NAMESPACE=$ns, POD=$dp, CONTAINER=$cnt ###'" >> $tmpFileForDownPods
                echo "echo '### kubectl logs -n $ns -p $dp -c $cnt'" >> $tmpFileForDownPods
-               echo "kubectl logs -n $ns -p $dp -c $cnt" >> $tmpFileForDownPods
+               echo "kubectl logs -n $ns -p $dp -c $cnt > /dev/null 2>&1" >> $tmpFileForDownPods
            done
        else
             echo "echo '### '" >> $tmpFileForHealthyPods
@@ -118,8 +117,8 @@ log_collector(){
        fi
       fi
     done
-    get_log_by_cmd $tempdir log_for_healthy_pods "sh $tmpFileForHealthyPods"
-    get_log_by_cmd $tempdir log_for_down_pods "sh $tmpFileForDownPods"
+    get_log_by_cmd $tempdir log_for_healthy_pods_$ns "sh $tmpFileForHealthyPods"
+    get_log_by_cmd $tempdir log_for_down_pods_$ns "sh $tmpFileForDownPods"
     rm -f $TmpFileForHealthyPods
     rm -f $TmpFileForDownPods
     trap - EXIT
@@ -153,8 +152,8 @@ pod_description_down_pods(){
     #myEcho "Collecting pod desciption for down pods..."
     tmpfile=$(mktemp /tmp/icpd-temp.XXXXXXXXXX)
     trap 'rm -f $tmpfile' EXIT
-    kubectl get pods --all-namespaces --no-headers | egrep -v 'Running|Completed' | awk '{print "kubectl describe pod " $2 " --namespace="$1";"}' > $tmpfile
-    get_log_by_cmd $tempdir pod_description "sh $tmpfile"
+    kubectl get pods --all-namespaces --no-headers | grep -Ev '1/1 .* R|2/2 .* R|3/3 .* R|4/4 .* R|5/5 .* R|6/6 .* R' | grep -v 'Completed' | awk '{print "echo \"\n\n### Pod Name\" " $2 ";kubectl describe pod " $2 " --namespace="$1";"}' > $tmpfile
+    get_log_by_cmd $tempdir down_pod_description "sh $tmpfile"
     rm -f $tmpfile
     trap - EXIT
 }
@@ -167,15 +166,14 @@ component_log_collector(){
     echo
     echo Collecting log for $component...
     echo -----------------------------
-    name_space=zen
-    pod_list=`kubectl get pods -n $name_space --no-headers|egrep -i $component|awk '{print $1}'`
+    pod_list=`kubectl get pods -n $ns --no-headers|egrep -i $component|awk '{print $1}'`
     for current_pod in `echo $pod_list`
     do
-       container=`kubectl get pods -n $name_space $current_pod -o jsonpath='{@.spec.containers[*].name}'`
+       container=`kubectl get pods -n $ns $current_pod -o jsonpath='{@.spec.containers[*].name}'`
        for cnt in `echo $container`
        do
           outfile=`echo "$component"PodLogs_"$name_space"_"$current_pod"_"$cnt"`
-          cmd="kubectl logs -n $name_space --tail=$line $current_pod -c $cnt"
+          cmd="kubectl logs -n $ns --tail=$line $current_pod -c $cnt"
           get_log_by_cmd $tempdir $outfile "$cmd"
        done
     done

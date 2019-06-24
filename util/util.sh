@@ -3,14 +3,22 @@
 # output colors
 export COLOR_RED='\033[0;31m'
 export COLOR_GREEN='\033[0;32m'
+export COLOR_YELLOW='\033[0;33m'
 export COLOR_NC='\033[0m' # No Color
 
-INSTALL_PATH=/ibm/InstallPackage/ibm-cp-app/cluster/  ### Added by sanjit ###
+INSTALL_PATH=/dp/ibm-cp-app/cluster/  ### Added by sanjit ###
 OUTPUT_DIR=$1    ### added by sanjit ###
 CONFIG_DIR="$INSTALL_PATH"
 CONFIG_FILENAME="config.yaml"
 HOSTS_FILENAME="hosts"
 
+print_error_message(){
+    echo -e  ${COLOR_GREEN}\[$1\]${COLOR_NC}
+}
+
+print_warning_message(){
+    echo -e  ${COLOR_ORANGE}\[$1\]${COLOR_NC}
+}
 
 print_passed_message() {
     echo -e $1 ${COLOR_GREEN}\[OK\]${COLOR_NC}
@@ -18,6 +26,10 @@ print_passed_message() {
 
 print_failed_message() {
     echo -e $1 ${COLOR_RED}\[FAILED\]${COLOR_NC}
+}
+
+print_failed_warn_message() {
+    echo -e $1 ${COLOR_RED}\[FAILED\]${COLOR_NC}${COLOR_YELLOW}\[$2\]${COLOR_NC}
 }
 
 get_os_version() {
@@ -145,7 +157,7 @@ verify_execution_host_is_master() {
 verify_authentication() {
     kubectl api-versions >/dev/null 2>&1 
     if [ $? -ne 0 ]; then
-        /ibm/InstallPackage/icp-patch/kubectl-auth.sh localhost
+        /dp/icp-patch/kubectl-auth.sh localhost
         echo -e  Authentication set for kubectl commnd ${COLOR_GREEN}\[OK\]${COLOR_NC}
     fi
 }

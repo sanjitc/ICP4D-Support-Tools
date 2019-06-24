@@ -1,0 +1,47 @@
+#!/bin/bash
+
+## Setup ##
+setup(){
+  export HOME_DIR=`pwd`
+  export UTIL_DIR=`pwd`"/util"
+  export LOG_COLLECT_DIR=`pwd`"/log_collector"
+
+  . $UTIL_DIR/util.sh
+  . $LOG_COLLECT_DIR/icpd-logcollector-master-nodes.sh
+}
+
+setup $@
+local name_space=zen
+local tempdir=$logs_dir
+
+
+
+
+
+local addon_pod=`kubectl -n zen get pods | grep -i -- -cognos-analytics-addon-|awk '{print $1}'`
+local artifact_pod=`kubectl -n zen get pods | grep -i -- -artifacts-|awk '{print $1}'`
+local biapp_pod=`kubectl -n zen get pods | grep -i -- -biapp-|awk '{print $1}'`
+local cgs_pod=`kubectl -n zen get pods | grep -i -- -cgs-|awk '{print $1}'`
+local cm_pod=`kubectl -n zen get pods | grep -i -- -cm-|awk '{print $1}'`
+local cs_pod=`kubectl -n zen get pods | grep -i -- -cs-|awk '{print $1}'`
+local ds_pod=`kubectl -n zen get pods | grep -i -- -ds-|awk '{print $1}'`
+local ngx_ns_pod=`kubectl -n zen get pods | grep -i -- -nginx-ns-|awk '{print $1}'`
+local rs_pod=`kubectl -n zen get pods | grep -i -- -rs-|awk '{print $1}'`
+local sp_pod=`kubectl -n zen get pods | grep -i -- -cognos-addon-sp-deployment-|awk '{print $1}'`
+
+
+
+
+
+get_log_by_cmd $tempdir ca_get_pod_addon "kubectl -n $name_space describe pod $addon_pod"
+get_log_by_cmd $tempdir ca_get_pod_artifacts "kubectl -n $name_space describe pod $artifact_pod"
+get_log_by_cmd $tempdir ca_get_pod_biapp "kubectl -n $name_space describe pod $biapp_pod"
+get_log_by_cmd $tempdir ca_get_pod_cgs "kubectl -n $name_space describe pod $cgs_pod"
+get_log_by_cmd $tempdir ca_get_pod_cm "kubectl -n $name_space describe pod $cm_pod"
+get_log_by_cmd $tempdir ca_get_pod_cs "kubectl -n $name_space describe pod $cs_pod"
+get_log_by_cmd $tempdir ca_get_pod_ds "kubectl -n $name_space describe pod $ds_pod"
+get_log_by_cmd $tempdir ca_get_pod_ngx_ns "kubectl -n $name_space describe pod $ngx_ns_pod"
+get_log_by_cmd $tempdir ca_get_pod_rs "kubectl -n $name_space describe pod $rs_pod"
+get_log_by_cmd $tempdir ca_get_pod_sp "kubectl -n $name_space describe pod $sp_pod"
+
+

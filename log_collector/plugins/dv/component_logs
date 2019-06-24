@@ -1,0 +1,101 @@
+#!/bin/bash
+
+
+## Setup ##
+setup(){
+  export HOME_DIR=`pwd`
+  export UTIL_DIR=`pwd`"/util"
+  export LOG_COLLECT_DIR=`pwd`"/log_collector"
+
+  . $UTIL_DIR/util.sh
+  . $LOG_COLLECT_DIR/icpd-logcollector-master-nodes.sh
+}
+
+setup $@
+local name_space=zen
+local tempdir=$logs_dir
+local dv_pod=`kubectl -n $name_space get pods | grep -i dv-0 | awk '{print $1}'`
+
+### Routine for capture pod logs for DV ###
+#all_pods=`kubectl get pods -n $name_space --no-headers | awk '{print $1}' | grep dv`
+#
+#for dp in `echo $all_pods`
+#do
+#   #check if this pod is down.
+#   kubectl get pods -n $ns $dp --no-headers|egrep -v 'Running|Complete' > /dev/null
+#
+#   if [ $? -eq 0 ] ; then
+#       #Pod is down
+#       cmd="kubectl logs -n $name_space -p $dp --all-containers=true"
+#       get_log_by_cmd $tempdir dv_pod_$dp.log "$cmd"
+#   else
+#       cmd="kubectl logs -n $name_space $dp --all-containers=true"
+#       get_log_by_cmd $tempdir dv_pod_$dp.log "$cmd"
+#   fi
+#done
+
+### Routine for capture DV component logs ###
+# DV service log
+cmd="kubectl -n $name_space exec -it $dv_pod -- bash -c 'journalctl -u dv.service -S today --no-pager'"
+get_log_by_cmd $tempdir dv_service.log "$cmd"
+
+# MySQL service log
+cmd="kubectl -n $name_space exec -it $dv_pod -- bash -c 'journalctl -u mysql.service -S today --no-pager'"
+get_log_by_cmd $tempdir dv_mysql_service.log "$cmd"
+
+# LDAP service log
+cmd="kubectl -n $name_space exec -it $dv_pod -- bash -c 'journalctl -u slapd.service -S today --no-pager'"
+get_log_by_cmd $tempdir dv_slapd_service.log "$cmd"
+
+# QP service logs
+cmd="kubectl -n $name_space exec -it $dv_pod -- bash -c 'journalctl -u qpconsole.service -S today --no-pager'"
+get_log_by_cmd $tempdir dv_qpconsole_service.log "$cmd"
+
+cmd="kubectl -n $name_space exec -it $dv_pod -- bash -c 'journalctl -u qpendpoint_1.service -S today --no-pager'"
+get_log_by_cmd $tempdir dv_qpendpoint_1_service.log "$cmd"
+
+cmd="kubectl -n $name_space exec -it $dv_pod -- bash -c 'journalctl -u qpendpoint_2.service -S today --no-pager'"
+get_log_by_cmd $tempdir dv_qpendpoint_2_service.log "$cmd"
+
+cmd="kubectl -n $name_space exec -it $dv_pod -- bash -c 'journalctl -u qpendpoint_3.service -S today --no-pager'"
+get_log_by_cmd $tempdir dv_qpendpoint_3_service.log "$cmd"
+
+cmd="kubectl -n $name_space exec -it $dv_pod -- bash -c 'journalctl -u qpendpoint_4.service -S today --no-pager'"
+get_log_by_cmd $tempdir dv_qpendpoint_4_service.log "$cmd"
+
+cmd="kubectl -n $name_space exec -it $dv_pod -- bash -c 'journalctl -u qpendpoint_5.service -S today --no-pager'"
+get_log_by_cmd $tempdir dv_qpendpoint_5_service.log "$cmd"
+
+cmd="kubectl -n $name_space exec -it $dv_pod -- bash -c 'journalctl -u qpserver.service -S today --no-pager'"
+get_log_by_cmd $tempdir dv_qpserver_service.log "$cmd"
+
+
+### Routine for capture DV component logs that does n't send to STDOUT ###
+# Big SQL
+get_pod_log_by_name $tempdir dv_bigsql_log $name_space $dv_pod "/var/ibm/bigsql/logs"
+get_pod_log_by_name $tempdir dv_bigsql_diag $name_space $dv_pod "/var/ibm/bigsql/diag"
+
+# Ambari
+get_pod_log_by_name $tempdir dv_ambari_server $name_space $dv_pod "/var/log/ambari-server"
+get_pod_log_by_name $tempdir dv_ambari_agent $name_space $dv_pod "/var/log/ambari-agent"
+get_pod_log_by_name $tempdir dv_ambari_agent_data $name_space $dv_pod "/var/lib/ambari-agent/data"
+
+# HDFS
+get_pod_log_by_name $tempdir dv_hdfs $name_space $dv_pod "/var/log/hadoop"
+
+# Hive
+get_pod_log_by_name $tempdir dv_hive $name_space $dv_pod "/var/log/hive"
+
+# Zookeeper
+get_pod_log_by_name $tempdir dv_zookeeper $name_space $dv_pod "/var/log/zookeeper"
+
+# Queryplex
+get_pod_log_by_name $tempdir dv_queryplex_data_gaiandblog $name_space $dv_pod "/mnt/dv_data/qpserver/gaiandb.log"
+get_pod_log_by_name $tempdir dv_queryplex_data_derby.log $name_space $dv_pod "/mnt/dv_data/qpserver/derby.log"
+get_pod_log_by_name $tempdir dv_queryplex_qpserver.log $name_space $dv_pod "/opt/ibm/qpconsole/logs/qpserver.log"
+get_pod_log_by_name $tempdir dv_queryplex_qpconsole.log $name_space $dv_pod "/opt/ibm/qpconsole/logs/qpconsole.log"
+get_pod_log_by_name $tempdir dv_queryplex_bigsql_QueryplexAdmin.log $name_space $dv_pod "/var/ibm/bigsql/diag/DIAG0000/QueryplexAdmin.log"
+get_pod_log_by_name $tempdir dv_queryplex_bigsql_db2diag.0.log $name_space $dv_pod "/var/ibm/bigsql/diag/DIAG0000/db2diag.0.log"
+get_pod_log_by_name $tempdir dv_queryplex_dv_data_qpservice.log $name_space $dv_pod "/mnt/dv_data/qpserver/qpservice.log"
+get_pod_log_by_name $tempdir dv_queryplex_bigsql.log $name_space $dv_pod "/var/ibm/bigsql/logs/bigsql.log"
+get_pod_log_by_name $tempdir dv_queryplex_qp_deploy.log $name_space $dv_pod "/var/log/qp_deploy.log"

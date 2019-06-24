@@ -1,0 +1,3 @@
+
+system/kubectl_get_pods
+system/kubectl_top_pods

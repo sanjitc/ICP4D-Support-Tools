@@ -1,0 +1,26 @@
+#!/bin/bash
+
+## Setup ##
+setup(){
+  export HOME_DIR=`pwd`
+  export UTIL_DIR=`pwd`"/util"
+  export LOG_COLLECT_DIR=`pwd`"/log_collector"
+
+  . $UTIL_DIR/util.sh
+  . $LOG_COLLECT_DIR/icpd-logcollector-master-nodes.sh
+}
+
+setup $@
+local name_space=zen
+local tempdir=$logs_dir
+
+get_log_by_cmd $tempdir dv_get_pod_dv-0 "kubectl -n $name_space get pod dv-0"
+get_log_by_cmd $tempdir dv_desc_pod_dv-0 "kubectl -n $name_space describe pod dv-0"
+get_log_by_cmd $tempdir dv_get_service_dv "kubectl -n $name_space get service dv"
+get_log_by_cmd $tempdir dv_desc_service_dv "kubectl -n $name_space describe service dv"
+get_log_by_cmd $tempdir dv_get_service_dv-internal "kubectl -n $name_space get service dv-internal"
+get_log_by_cmd $tempdir dv_desc_service_dv-internal "kubectl -n $name_space describe service dv-internal"
+get_log_by_cmd $tempdir dv_get_service_dv-server "kubectl -n $name_space get service dv-server"
+get_log_by_cmd $tempdir dv_desc_service_dv-server "kubectl -n $name_space describe service dv-server"
+get_log_by_cmd $tempdir dv_get_pvc_dv-pvc "kubectl -n $name_space get pvc dv-pvc"
+get_log_by_cmd $tempdir dv_desc_pvc_dv-pvc "kubectl -n $name_space describe pvc dv-pvc"

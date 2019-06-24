@@ -1,0 +1,19 @@
+#!/bin/bash
+
+## Setup ##
+setup(){
+  export HOME_DIR=`pwd`
+  export UTIL_DIR=`pwd`"/util"
+  export LOG_COLLECT_DIR=`pwd`"/log_collector"
+
+  . $UTIL_DIR/util.sh
+  . $LOG_COLLECT_DIR/icpd-logcollector-master-nodes.sh
+}
+
+setup $@
+local name_space=zen
+local tempdir=$logs_dir
+
+uc_pod=`kubectl -n $name_space get pods | grep -i unified-console | awk '{print $1}'`
+
+get_pod_log_by_name $tempdir dv_unified_console_log $name_space $uc_pod "/opt/ibm-datasrvrmgr/logs/"

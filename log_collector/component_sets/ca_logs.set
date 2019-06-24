@@ -1,0 +1,14 @@
+
+system/systemctl_glusterd
+system/systemctl_docker
+system/systemctl_kubelet
+system/gluster_volume_info
+system/gluster_volume_status
+system/kubectl_get_endpoint
+system/kubectl_cluster_info
+system/kubectl_get_pvc
+system/vmstat
+
+ca/pod_logs
+ca/service_pod_desc
+ca/service_pod_yaml

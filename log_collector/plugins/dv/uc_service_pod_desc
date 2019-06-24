@@ -1,0 +1,22 @@
+#!/bin/bash
+
+## Setup ##
+setup(){
+  export HOME_DIR=`pwd`
+  export UTIL_DIR=`pwd`"/util"
+  export LOG_COLLECT_DIR=`pwd`"/log_collector"
+
+  . $UTIL_DIR/util.sh
+  . $LOG_COLLECT_DIR/icpd-logcollector-master-nodes.sh
+}
+
+setup $@
+local name_space=zen
+local tempdir=$logs_dir
+local uc_pod=`kubectl -n zen get pods | grep -i unified-console|awk '{print $1}'`
+local uc_console=`kubectl -n zen get service | grep -i dv-console|awk '{print $1}'`
+
+get_log_by_cmd $tempdir dv_get_pod_unified_console "kubectl -n $name_space get pod $uc_pod"
+get_log_by_cmd $tempdir dv_desc_pod_unified_console "kubectl -n $name_space describe pod $uc_pod"
+get_log_by_cmd $tempdir dv_get_service_uc "kubectl -n $name_space get service $uc_console"
+get_log_by_cmd $tempdir dv_desc_service_uc "kubectl -n $name_space describe service $uc_console"
