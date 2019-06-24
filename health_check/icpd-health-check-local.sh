@@ -1,5 +1,5 @@
 #!/bin/bash
-# Run health check locally on a single master or worker node
+# Run health check locally on a single worker node
 
 
 #Acceptable time difference (milliseconds) between nodes.
@@ -26,9 +26,11 @@ setup() {
 health_check() {
     local temp_dir=$1
     current_node=`hostname -i|awk '{print $1}'`
-    master_nodes=`get_master_nodes $CONFIG_DIR|awk '{print $1}'`
-    all_nodes=`get_master_nodes $CONFIG_DIR|awk '{print $1}'; get_worker_nodes $CONFIG_DIR|awk '{print $1}'`
-    IsMaster=`is_master_node $CONFIG_DIR "$current_node"`
+    #master_nodes=`get_master_nodes $CONFIG_DIR|awk '{print $1}'`
+    #all_nodes=`get_master_nodes $CONFIG_DIR|awk '{print $1}'; 
+    #get_worker_nodes $CONFIG_DIR|awk '{print $1}'`
+    #IsMaster=`is_master_node $CONFIG_DIR "$current_node"`
+    IsMaster=""
 
         echo
         echo Checking node availability...
