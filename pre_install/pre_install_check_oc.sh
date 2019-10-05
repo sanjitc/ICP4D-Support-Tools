@@ -53,7 +53,7 @@ function usage(){
     echo ""
     echo "Example: "
     echo "./pre_install_check_oc.sh --type=master --installpath=/ibm/cpd --ocuser=ocadmin"
-    echo "./pre_install_check_oc.sh --type=master --installpath=/ibm/cpd --ocuser=ocadmin --ocpassword=icp4dAdmin"
+    echo "./pre_install_check_oc.sh --type=worker --installpath=/ibm/cpd --ocuser=ocadmin --ocpassword=icp4dAdmin"
 }
 
 
